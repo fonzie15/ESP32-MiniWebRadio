@@ -1,0 +1,13 @@
+---------------------------------------------------------------------------
+| Name                        | AudioKit Pin | Display Pin | Jumper Color |
+| TFT Chip Select CS          |           22 |          24 |    white     |
+| TP Chip Select CS           |           13 |          26 |     grey     |
+| TP IRQ                      |           12 |          11 |    brown     |
+| TFT Data Register Select DC |            5 |          18 |   violet     |
+| TFT TP MOSI                 |           23 |          19 |     blue     |
+| TFT TP MISO                 |           19 |          21 |    green     |
+| TFT TP SCK                  |           18 |          23 |   yellow     |
+| GND                         |          GND |           6 |    black     |
+| 5V                          |           5V |           2 |      red     |
+| 3.3V                        |         3.3V |           1 |   orange     |
+---------------------------------------------------------------------------
