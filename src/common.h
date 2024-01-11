@@ -6,7 +6,7 @@
 
 #define _SSID               "mySSID"                        // Your WiFi credentials here
 #define _PW                 "myWiFiPassword"                //
-#define DECODER             3                               // (0)VS1053 , (1)MAX98357A PCM5102A CS4344... (2)AC101, (3)ES8388, (4)WM8978
+#define DECODER             2                               // (0)VS1053 , (1)MAX98357A PCM5102A CS4344... (2)AC101, (3)ES8388, (4)WM8978
 #define TFT_CONTROLLER      2                               // (0)ILI9341, (1)HX8347D, (2)ILI9486a, (3)ILI9486b, (4)ILI9488, (5)ST7796, (6)ST7796RPI
 #define DISPLAY_INVERSION   0                               // (0) off (1) on
 #define TFT_ROTATION        1                               // 1 or 3 (landscape)
@@ -72,10 +72,10 @@
         #define VS1053_MISO   -1  // VS1053     (HSPI)
         #define VS1053_SCK    -1  // VS1053     (HSPI) (sometimes we need a 1k resistor against ground)
     #else
-        #define I2S_DOUT      26
+        #define I2S_DOUT      25
         #define I2S_DIN       -1  // pin not used
         #define I2S_BCLK      27
-        #define I2S_LRC       25
+        #define I2S_LRC       26
         #define I2S_MCLK       0  // mostly not used
     #endif
         #define I2C_DATA      33  // some DACs are controlled via I2C
