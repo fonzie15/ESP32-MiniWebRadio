@@ -1,22 +1,28 @@
 // created: 10.Feb.2022
 // updated: 12.Oct.2023
 
+// JAR: Used Display: 3,5" RPi Display from Elegoo with XPT2046 Touch Controller (https://www.amazon.de/gp/product/B01JRUH0CY/ref=ppx_yo_dt_b_asin_title_o00_s02?ie=UTF8&psc=1, https://www.elegoo.com/products/elegoo-3-5-inch-tft-lcd-screen)
+//                    Driver: https://download.elegoo.com/03%20Other%20Kits/06%203.5-inch%20Screen/ELEGOO%203.5%20Inch%20Touch%20Screen%20User%20Manual%20V1.0.2022.08.02.zip
+//                            https://drive.google.com/file/d/1DIZuPjzjg7gkt929Sbob2Ghhu8IlSXHg/view?usp=sharing 
+//      Removed Resistors from Audiokit Board as advised
+//      Pinout: see pinout.txt
+
 #pragma once
 #pragma GCC optimize("Os") // optimize for code size
 
 #define _SSID               "mySSID"                        // Your WiFi credentials here
 #define _PW                 "myWiFiPassword"                //
 #define DECODER             2                               // (0)VS1053 , (1)MAX98357A PCM5102A CS4344... (2)AC101, (3)ES8388, (4)WM8978
-#define TFT_CONTROLLER      2                               // (0)ILI9341, (1)HX8347D, (2)ILI9486a, (3)ILI9486b, (4)ILI9488, (5)ST7796, (6)ST7796RPI
+#define TFT_CONTROLLER      3                               // (0)ILI9341, (1)HX8347D, (2)ILI9486a, (3)ILI9486b, (4)ILI9488, (5)ST7796, (6)ST7796RPI
 #define DISPLAY_INVERSION   0                               // (0) off (1) on
 #define TFT_ROTATION        1                               // 1 or 3 (landscape)
-#define TFT_FREQUENCY       40000000                        // 80000000, 40000000, 27000000, 20000000, 10000000
+#define TFT_FREQUENCY       20000000                        // 80000000, 40000000, 27000000, 20000000, 10000000
 #define TP_VERSION          3                               // (0)ILI9341, (1)ILI9341RPI, (2)HX8347D, (3)ILI9486, (4)ILI9488, (5)ST7796, (3)ST7796RPI
 #define TP_ROTATION         1                               // 1 or 3 (landscape)
 #define AUDIOTASK_CORE      1                               // 0 or 1
 #define AUDIOTASK_PRIO      2                               // 0 ... 24  Priority of the Task (0...configMAX_PRIORITIES -1)
 #define I2S_COMM_FMT        0                               // (0) commFmt MSB MAX98357A PCM5102A CS4344, (1) commFmt LSB PT8211
-#define SDMMC_FREQUENCY     40000000                        // 80000000, 40000000, 27000000, 20000000, 10000000 not every SD Card will run at 80MHz
+#define SDMMC_FREQUENCY     20000000                        // 80000000, 40000000, 27000000, 20000000, 10000000 not every SD Card will run at 80MHz
 #define FTP_USERNAME        "esp32"                         // user and pw in FTP Client
 #define FTP_PASSWORD        "esp32"
 #define CONN_TIMEOUT        500                             // unencrypted connection timeout in ms (http://...)
@@ -55,8 +61,8 @@
         #define TFT_CS        22
         #define TFT_DC        5
         #define TFT_BL        -1  // at -1 the brightness menu is not displayed
-        #define TP_IRQ        12  // VN
-        #define TP_CS         13
+        #define TP_IRQ        13  // VN
+        #define TP_CS         12
         #define SD_MMC_D0      2  // cannot be changed
         #define SD_MMC_CLK    14  // cannot be changed
         #define SD_MMC_CMD    15  // cannot be changed
