@@ -78,10 +78,10 @@
         #define VS1053_MISO   -1  // VS1053     (HSPI)
         #define VS1053_SCK    -1  // VS1053     (HSPI) (sometimes we need a 1k resistor against ground)
     #else
-        #define I2S_DOUT      25
+        #define I2S_DOUT      26
         #define I2S_DIN       -1  // pin not used
         #define I2S_BCLK      27
-        #define I2S_LRC       26
+        #define I2S_LRC       25
         #define I2S_MCLK       0  // mostly not used
     #endif
         #define I2C_DATA      33  // some DACs are controlled via I2C
