@@ -90,9 +90,9 @@
         #define SD_DETECT     -1  // some pins on special boards: Lyra, Olimex, A1S ...
         #define HP_DETECT     39
         #define AMP_ENABLED   21
-        #define ROTARY_ENCODER_A_PIN 36
-        #define ROTARY_ENCODER_B_PIN 4
-        #define ROTARY_ENCODER_BUTTON_PIN 34
+        #define ROTARY_ENCODER_A_PIN 34
+        #define ROTARY_ENCODER_B_PIN 36
+        #define ROTARY_ENCODER_BUTTON_PIN 4
         #define ROTARY_ENCODER_STEPS 2
 #endif
 

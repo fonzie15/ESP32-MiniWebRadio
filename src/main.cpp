@@ -25,7 +25,7 @@
 // clang-format on
 
 // global variables
-const uint8_t  _max_volume = 12;
+const uint8_t  _max_volume = 20;
 const uint16_t _max_stations = 1000;
 int8_t         _releaseNr = -1;
 int8_t         _currentServer = -1;
@@ -2079,19 +2079,19 @@ void           setVolume(uint8_t vol) {
 
 #if DECODER > 1 // ES8388, AC101 ...
     if(HP_DETECT == -1) {
-        dac.SetVolumeSpeaker(_cur_volume * 3);
-        dac.SetVolumeHeadphone(_cur_volume * 3);
+        dac.SetVolumeSpeaker(_cur_volume * 2);
+        dac.SetVolumeHeadphone(_cur_volume * 2);
     }
     else {
         if(digitalRead(HP_DETECT) == HIGH) {
             // SerialPrintfln("HP_Detect = High, volume %i", vol);
-            dac.SetVolumeSpeaker(_cur_volume * 3);
+            dac.SetVolumeSpeaker(_cur_volume * 2);
             dac.SetVolumeHeadphone(0);
         }
         else {
             // SerialPrintfln("HP_Detect = Low, volume %i", vol);
             dac.SetVolumeSpeaker(1);
-            dac.SetVolumeHeadphone(_cur_volume * 3);
+            dac.SetVolumeHeadphone(_cur_volume * 2);
         }
     }
 #endif
@@ -2869,11 +2869,21 @@ void loop() {
         }
         else if (_rotaryMode == 1) {
             //mark current selected station
+            if (newRotVal > _cur_station) {
+                nextStation();
+            }
+            else if (newRotVal < _cur_station) {
+                prevStation();
+            }
+            showLogoAndStationName();
+            clearTitle();
+            changeState(RADIOmenue);
+            _timeCounter.timer = 5;
+            _timeCounter.factor = 1.0;        
         }
     }
     if (rotaryEncoder.isEncoderButtonClicked()) {
-        //rotary_onButtonClick();
-        //log_i("Encoder button is: %s", (rotaryEncoder.isEncoderButtonDown() ? "down" : "up"));
+        rotary_onButtonClick();
     }
 
     if(_f_muteDecrement) {
@@ -2937,6 +2947,7 @@ void loop() {
                 drawImage(_chbuf, _winRSSID.x, _winRSSID.y);
             }
             if(!_timeCounter.timer) {
+                _rotaryMode = 0;
                 showFooterRSSI(true);
                 if(     _state == RADIOico) { changeState(RADIO); }
                 else if(_state == RADIOmenue) { changeState(RADIO); }
@@ -4302,17 +4313,20 @@ void rotary_onButtonClick() {
         return;
     lastTimePressed = millis();
 
-/*
-    if (_rotaryMode == 0) {
+    if (_rotaryMode == 0) {             // change mode to station select
+        changeState(RADIOmenue);
+        rotaryEncoder.setBoundaries(1, _sum_stations, true);
+        rotaryEncoder.setEncoderValue(_cur_station);
         _rotaryMode = 1;
-        showStationsList(_staListNr);
-        changeState(STATIONSLIST);
     }
-    else if (_rotaryMode == 1) {
-        setStation(_cur_station);
+    else if (_rotaryMode == 1) {        // change mode back to volume select
         changeState(RADIO);
+        showLogoAndStationName();
+        showFooter();
+        rotaryEncoder.setBoundaries(0, _max_volume, false);
+        rotaryEncoder.setEncoderValue(_cur_volume);
         _rotaryMode = 0;
     }
-*/
+
     log_i("Rotary button clicked. ");
 }
