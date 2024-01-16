@@ -27,7 +27,6 @@
 // global variables
 const uint8_t  _max_volume = 12;
 const uint16_t _max_stations = 1000;
-static unsigned long lastTimePressed = 0;
 int8_t         _releaseNr = -1;
 int8_t         _currentServer = -1;
 uint8_t        _alarmdays = 0;
@@ -2874,7 +2873,7 @@ void loop() {
     }
     if (rotaryEncoder.isEncoderButtonClicked()) {
         //rotary_onButtonClick();
-        log_i("Encoder button is: %s", (rotaryEncoder.isEncoderButtonDown() ? "down" : "up"));
+        //log_i("Encoder button is: %s", (rotaryEncoder.isEncoderButtonDown() ? "down" : "up"));
     }
 
     if(_f_muteDecrement) {
@@ -4297,7 +4296,9 @@ void IRAM_ATTR readEncoderISR() {
 }
 
 void rotary_onButtonClick() {
-    if (millis() - lastTimePressed < 500)
+    static unsigned long lastTimePressed = 0;
+
+    if (millis() - lastTimePressed < 200)
         return;
     lastTimePressed = millis();
 
