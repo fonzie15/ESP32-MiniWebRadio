@@ -25,8 +25,9 @@
 // clang-format on
 
 // global variables
-const uint8_t  _max_volume = 21;
+const uint8_t  _max_volume = 12;
 const uint16_t _max_stations = 1000;
+static unsigned long lastTimePressed = 0;
 int8_t         _releaseNr = -1;
 int8_t         _currentServer = -1;
 uint8_t        _alarmdays = 0;
@@ -48,6 +49,7 @@ uint8_t        _fileListPos = 0;
 uint16_t       _fileListNr = 0;
 uint8_t        _itemListPos = 0;          // DLNA items
 uint16_t       _itemListNr = 0;
+uint8_t        _rotaryMode = 0;           // current Rotary mode: 0 = volume; 1 = radio station select 
 int16_t        _alarmtime = 0;            // in minutes (23:59 = 23 *60 + 59)
 int16_t        _toneha = 0;               // BassFreq 0...15        VS1053
 int16_t        _tonehf = 0;               // TrebleGain 0...14      VS1053
@@ -210,6 +212,8 @@ ES8388 dac;
 #if DECODER == 4 // wm8978
 WM8978 dac;
 #endif
+
+AiEsp32RotaryEncoder rotaryEncoder = AiEsp32RotaryEncoder(ROTARY_ENCODER_A_PIN, ROTARY_ENCODER_B_PIN, ROTARY_ENCODER_BUTTON_PIN, -1, ROTARY_ENCODER_STEPS);
 
 SemaphoreHandle_t mutex_rtc;
 SemaphoreHandle_t mutex_display;
@@ -1765,6 +1769,11 @@ void setup() {
         }
     }
     Serial.print("\n\n");
+    rotaryEncoder.begin();
+    rotaryEncoder.setup(readEncoderISR);
+    rotaryEncoder.setBoundaries(0, _max_volume, false); //minValue, maxValue, circleValues true|false (when max go to min and vice versa)
+    rotaryEncoder.setAcceleration(10);
+
     mutex_rtc = xSemaphoreCreateMutex();
     mutex_display = xSemaphoreCreateMutex();
     SerialPrintfln("   ");
@@ -1806,7 +1815,7 @@ void setup() {
     tp.TP_Send(0x90); // Remove any blockage
 
     SerialPrintfln("setup: ....  Init SD card");
-    pinMode(IR_PIN, INPUT_PULLUP); // if ir_pin is read only, have a external resistor (~10...40KOhm)
+    if (IR_PIN >= 0) pinMode(IR_PIN, INPUT_PULLUP); // if ir_pin is read only, have a external resistor (~10...40KOhm)
     pinMode(SD_MMC_D0, INPUT_PULLUP);
 #ifdef CONFIG_IDF_TARGET_ESP32S3
     SD_MMC.setPins(SD_MMC_CLK, SD_MMC_CMD, SD_MMC_D0);
@@ -1899,6 +1908,7 @@ void setup() {
         setVolume(_cur_volume);
         _mute_volume = _cur_volume;
     }
+    rotaryEncoder.setEncoderValue(_cur_volume); //set start value
 
     showHeadlineItem(RADIO);
     if(_cur_station > 0) setStation(_cur_station);
@@ -2848,6 +2858,25 @@ void loop() {
     tp.loop();
     ftpSrv.handleFTP();
     soap.loop();
+
+    if (rotaryEncoder.encoderChanged()) {
+        long newRotVal = rotaryEncoder.readEncoder();
+        if (_rotaryMode == 0) {
+            //log_i("New rotary encoder value: %i", newRotVal);
+            if (newRotVal > _cur_volume)
+                upvolume();
+            else
+                downvolume();
+        }
+        else if (_rotaryMode == 1) {
+            //mark current selected station
+        }
+    }
+    if (rotaryEncoder.isEncoderButtonClicked()) {
+        //rotary_onButtonClick();
+        //log_i("Encoder button is: %s", (rotaryEncoder.isEncoderButtonDown() ? "down" : "up"));
+    }
+
     if(_f_muteDecrement) {
         if(_mute_volume > 0) {
             _mute_volume--;
@@ -4261,7 +4290,27 @@ void dlna_item(bool lastItem, String name, String id, size_t size, String uri, b
     _dlna_items.uri.push_back(x_ps_strdup(uri.c_str()));
     _dlna_items.isDir.push_back(isDir == true);
     _dlna_items.isAudio.push_back(isAudio == true);
+}
 
+void IRAM_ATTR readEncoderISR() {
+    rotaryEncoder.readEncoder_ISR();
+}
 
+void rotary_onButtonClick() {
+    if (millis() - lastTimePressed < 200)
+        return;
+    lastTimePressed = millis();
 
+    if (_rotaryMode == 0) {
+        _rotaryMode = 1;
+        showStationsList(_staListNr);
+        changeState(STATIONSLIST);
+    }
+    else if (_rotaryMode == 1) {
+        setStation(_cur_station);
+        changeState(RADIO);
+        _rotaryMode = 0;
+    }
+
+    log_i("Rotary button clicked. New mode: %i", _rotaryMode);
 }

@@ -55,6 +55,7 @@
 #include "WM8978.h"
 #include "SoapESP32.h"
 #include "Arduino_JSON.h"
+#include "AiEsp32RotaryEncoder.h"
 
 #ifdef CONFIG_IDF_TARGET_ESP32
     // Digital I/O used
@@ -89,6 +90,10 @@
         #define SD_DETECT     -1  // some pins on special boards: Lyra, Olimex, A1S ...
         #define HP_DETECT     39
         #define AMP_ENABLED   21
+        #define ROTARY_ENCODER_A_PIN 34
+        #define ROTARY_ENCODER_B_PIN 36
+        #define ROTARY_ENCODER_BUTTON_PIN 0
+        #define ROTARY_ENCODER_STEPS 2
 #endif
 
 #ifdef CONFIG_IDF_TARGET_ESP32S3
@@ -235,12 +240,14 @@ void           connecttohost(const char* host);
 void           connecttoFS(const char* filename, uint32_t resumeFilePos = 0);
 void           stopSong();
 void IRAM_ATTR headphoneDetect();
+void IRAM_ATTR readEncoderISR();
 int32_t        DLNA_setCurrentServer(String serverName);
 void           DLNA_showServer();
 void           DLNA_browseServer(String objectId, uint8_t level);
 void           DLNA_getFileItems(String uri);
 void           DLNA_showContent(String objectId, uint8_t level);
 void           showDlnaItemsList(uint8_t level, uint16_t itemNr);
+void           rotary_onButtonClick();
 
 //prototypes (audiotask.cpp)
 void audioInit();
