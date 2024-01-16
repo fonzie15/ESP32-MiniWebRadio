@@ -92,7 +92,7 @@
         #define AMP_ENABLED   21
         #define ROTARY_ENCODER_A_PIN 34
         #define ROTARY_ENCODER_B_PIN 36
-        #define ROTARY_ENCODER_BUTTON_PIN 0
+        #define ROTARY_ENCODER_BUTTON_PIN 4
         #define ROTARY_ENCODER_STEPS 2
 #endif
 

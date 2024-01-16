@@ -2874,7 +2874,7 @@ void loop() {
     }
     if (rotaryEncoder.isEncoderButtonClicked()) {
         //rotary_onButtonClick();
-        //log_i("Encoder button is: %s", (rotaryEncoder.isEncoderButtonDown() ? "down" : "up"));
+        log_i("Encoder button is: %s", (rotaryEncoder.isEncoderButtonDown() ? "down" : "up"));
     }
 
     if(_f_muteDecrement) {
@@ -4297,10 +4297,11 @@ void IRAM_ATTR readEncoderISR() {
 }
 
 void rotary_onButtonClick() {
-    if (millis() - lastTimePressed < 200)
+    if (millis() - lastTimePressed < 500)
         return;
     lastTimePressed = millis();
 
+/*
     if (_rotaryMode == 0) {
         _rotaryMode = 1;
         showStationsList(_staListNr);
@@ -4311,6 +4312,6 @@ void rotary_onButtonClick() {
         changeState(RADIO);
         _rotaryMode = 0;
     }
-
-    log_i("Rotary button clicked. New mode: %i", _rotaryMode);
+*/
+    log_i("Rotary button clicked. ");
 }
