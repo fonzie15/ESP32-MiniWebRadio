@@ -2860,8 +2860,8 @@ void loop() {
 
     if (rotaryEncoder.encoderChanged()) {
         long newRotVal = rotaryEncoder.readEncoder();
+        //log_i("New rotary encoder value: %i; Rotary Mode: %i", newRotVal, _rotaryMode);
         if (_rotaryMode == 0) {
-            //log_i("New rotary encoder value: %i", newRotVal);
             if (newRotVal > _cur_volume)
                 upvolume();
             else
@@ -2947,7 +2947,7 @@ void loop() {
                 drawImage(_chbuf, _winRSSID.x, _winRSSID.y);
             }
             if(!_timeCounter.timer) {
-                _rotaryMode = 0;
+                setRotaryToVolumeMode(0);
                 showFooterRSSI(true);
                 if(     _state == RADIOico) { changeState(RADIO); }
                 else if(_state == RADIOmenue) { changeState(RADIO); }
@@ -4307,6 +4307,7 @@ void IRAM_ATTR readEncoderISR() {
 }
 
 void rotary_onButtonClick() {
+    //log_i("Rotary button clicked. ");
     static unsigned long lastTimePressed = 0;
 
     if (millis() - lastTimePressed < 200)
@@ -4315,18 +4316,24 @@ void rotary_onButtonClick() {
 
     if (_rotaryMode == 0) {             // change mode to station select
         changeState(RADIOmenue);
-        rotaryEncoder.setBoundaries(1, _sum_stations, true);
-        rotaryEncoder.setEncoderValue(_cur_station);
-        _rotaryMode = 1;
+        setRotaryToVolumeMode(1);
     }
     else if (_rotaryMode == 1) {        // change mode back to volume select
         changeState(RADIO);
         showLogoAndStationName();
         showFooter();
-        rotaryEncoder.setBoundaries(0, _max_volume, false);
-        rotaryEncoder.setEncoderValue(_cur_volume);
-        _rotaryMode = 0;
+        setRotaryToVolumeMode(0);
     }
+}
 
-    log_i("Rotary button clicked. ");
+void setRotaryToVolumeMode(uint8_t mode) {
+    _rotaryMode = mode;
+    if (mode == 0) {
+        rotaryEncoder.setBoundaries(0, _max_volume, false);
+        rotaryEncoder.setEncoderValue(_cur_volume);    
+    }
+    else if (mode == 1) {
+        rotaryEncoder.setBoundaries(1, _sum_stations, true);
+        rotaryEncoder.setEncoderValue(_cur_station);       
+    }
 }

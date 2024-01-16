@@ -248,6 +248,7 @@ void           DLNA_getFileItems(String uri);
 void           DLNA_showContent(String objectId, uint8_t level);
 void           showDlnaItemsList(uint8_t level, uint16_t itemNr);
 void           rotary_onButtonClick();
+void           setRotaryToVolumeMode(uint8_t mode);
 
 //prototypes (audiotask.cpp)
 void audioInit();
