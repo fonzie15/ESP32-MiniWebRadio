@@ -60,6 +60,7 @@ int16_t        _toneHP = 0;               // -40 ... +6 (dB)        audioI2S
 uint16_t       _icyBitRate = 0;           // from http response header via event
 uint16_t       _avrBitRate = 0;           // from decoder via getBitRate(true)
 uint16_t       _cur_station = 0;          // current station(nr), will be set later
+uint16_t       _prev_station = 0;          // current station(nr), will be set later
 uint16_t       _cur_AudioFileNr = 0;      // position inside _SD_content
 uint16_t       _sleeptime = 0;            // time in min until MiniWebRadio goes to sleep
 uint16_t       _sum_stations = 0;
@@ -2869,17 +2870,12 @@ void loop() {
         }
         else if (_rotaryMode == 1) {
             //mark current selected station
-            if (newRotVal > _cur_station) {
-                nextStation();
-            }
-            else if (newRotVal < _cur_station) {
-                prevStation();
-            }
-            showLogoAndStationName();
-            clearTitle();
-            changeState(RADIOmenue);
-            _timeCounter.timer = 5;
-            _timeCounter.factor = 1.0;        
+            _prev_station = _cur_station;
+            _cur_station = (uint16_t)newRotVal;
+            highlightCurrentStationInList();
+            _timeCounter.timer = 10;
+            _timeCounter.factor = 1.0;   
+            log_i("_prev_station: %i, _cur_station: %i", _prev_station, _cur_station);
         }
     }
     if (rotaryEncoder.isEncoderButtonClicked()) {
@@ -2947,7 +2943,8 @@ void loop() {
                 drawImage(_chbuf, _winRSSID.x, _winRSSID.y);
             }
             if(!_timeCounter.timer) {
-                setRotaryToVolumeMode(0);
+                setRotaryMode(0);
+                if (_prev_station > 0) { setStation(_cur_station); }
                 showFooterRSSI(true);
                 if(     _state == RADIOico) { changeState(RADIO); }
                 else if(_state == RADIOmenue) { changeState(RADIO); }
@@ -4315,18 +4312,19 @@ void rotary_onButtonClick() {
     lastTimePressed = millis();
 
     if (_rotaryMode == 0) {             // change mode to station select
-        changeState(RADIOmenue);
-        setRotaryToVolumeMode(1);
+        _prev_station = 0;
+        changeState(STATIONSLIST);
+        highlightCurrentStationInList();
+        setRotaryMode(1);
     }
     else if (_rotaryMode == 1) {        // change mode back to volume select
+        setStation(_cur_station);
         changeState(RADIO);
-        showLogoAndStationName();
-        showFooter();
-        setRotaryToVolumeMode(0);
+        setRotaryMode(0);
     }
 }
 
-void setRotaryToVolumeMode(uint8_t mode) {
+void setRotaryMode(uint8_t mode) {
     _rotaryMode = mode;
     if (mode == 0) {
         rotaryEncoder.setBoundaries(0, _max_volume, false);
@@ -4336,4 +4334,30 @@ void setRotaryToVolumeMode(uint8_t mode) {
         rotaryEncoder.setBoundaries(1, _sum_stations, true);
         rotaryEncoder.setEncoderValue(_cur_station);       
     }
+}
+
+void highlightCurrentStationInList() {
+    uint8_t lineHight = _winWoHF.h / 10;
+    uint8_t staListPos;
+    String content;
+    int32_t idx;
+
+    log_i("highlight: _prev_station: %i, _cur_station: %i", _prev_station, _cur_station);
+    if (_prev_station > 0) {
+        staListPos = _prev_station -1;
+        tft.setCursor(10, _winFooter.h + (staListPos) * lineHight);
+        sprintf(_chbuf, "station_%03d", _prev_station);
+        content = stations.getString(_chbuf, " #not_found");
+        idx = content.indexOf("#");
+        sprintf(_chbuf, ANSI_ESC_YELLOW"%03d " ANSI_ESC_WHITE "%s\n",_prev_station, content.substring(0, idx).c_str());
+        tft.writeText((uint8_t*)_chbuf, -1, -1, true);
+    }
+
+    staListPos = _cur_station - 1;
+    tft.setCursor(10, _winFooter.h + (staListPos) * lineHight);
+    sprintf(_chbuf, "station_%03d", _cur_station);
+    content = stations.getString(_chbuf, " #not_found");
+    idx = content.indexOf("#");
+    sprintf(_chbuf, ANSI_ESC_YELLOW"%03d " ANSI_ESC_GREEN "%s\n",_cur_station, content.substring(0, idx).c_str());
+    tft.writeText((uint8_t*)_chbuf, -1, -1, true);
 }
