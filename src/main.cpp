@@ -2867,15 +2867,12 @@ void loop() {
 
     if (rotaryEncoder.encoderChanged()) {
         long newRotVal = rotaryEncoder.readEncoder();
-        //log_i("New rotary encoder value: %i; Rotary Mode: %i", newRotVal, _rotaryMode);
+        //log_i("New rotary encoder value: %i; Rotary Mode: %i, Volume: %i, Station: %i", newRotVal, _rotaryMode, _cur_volume, _cur_station);
         if (_rotaryMode == 0) {
-            //log_i("New rotary encoder value: %i; Rotary Mode: %i, Volume: %i", newRotVal, _rotaryMode, _cur_volume);
             setVolume((uint8_t)newRotVal);
             showHeadlineVolume();
         }
         else if (_rotaryMode == 1) {
-            //mark current selected station
-            //log_i("New rotary encoder value: %i; Rotary Mode: %i, Prev Sta: %i, Curr Sta: %i", newRotVal, _rotaryMode, _prev_station, _cur_station);
             _prev_station = _cur_station;
             _cur_station = (uint16_t)newRotVal;
             highlightCurrentStationInList();
@@ -4344,12 +4341,14 @@ void setRotaryMode(uint8_t mode) {
 }
 
 void highlightCurrentStationInList() {
+    xSemaphoreTake(mutex_display, portMAX_DELAY);
+
     uint8_t lineHight = _winWoHF.h / 10;
     uint8_t staListPos;
     String content;
     int32_t idx;
-
-    log_i("highlight before: _prev_station: %i, _cur_station: %i", _prev_station, _cur_station);
+    
+    //log_i("highlight before: _prev_station: %i, _cur_station: %i", _prev_station, _cur_station);
     if (_prev_station > 0) {
         staListPos = _prev_station -1;
         tft.setCursor(10, _winFooter.h + (staListPos) * lineHight);
@@ -4367,4 +4366,5 @@ void highlightCurrentStationInList() {
     idx = content.indexOf("#");
     sprintf(_chbuf, ANSI_ESC_YELLOW"%03d " ANSI_ESC_GREEN "%s\n",_cur_station, content.substring(0, idx).c_str());
     tft.writeText((uint8_t*)_chbuf, -1, -1, true);
+    xSemaphoreGive(mutex_display);
 }
