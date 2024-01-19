@@ -67,7 +67,6 @@ uint16_t       _sum_stations = 0;
 uint32_t       _resumeFilePos = 0;        //
 uint32_t       _playlistTime = 0;         // playlist start time millis() for timeout
 uint32_t       _settingsHash = 0;
-uint32_t       _lastSettingsUpdate = 0;
 uint32_t       _audioFileSize = 0;
 uint32_t       _media_downloadPort = 0;
 const char*    _pressBtn[8];
@@ -214,7 +213,7 @@ ES8388 dac;
 WM8978 dac;
 #endif
 
-AiEsp32RotaryEncoder rotaryEncoder = AiEsp32RotaryEncoder(ROTARY_ENCODER_A_PIN, ROTARY_ENCODER_B_PIN, ROTARY_ENCODER_BUTTON_PIN, -1, ROTARY_ENCODER_STEPS);
+AiEsp32RotaryEncoder* rotaryEncoder = new AiEsp32RotaryEncoder(ROTARY_ENCODER_A_PIN, ROTARY_ENCODER_B_PIN, ROTARY_ENCODER_BUTTON_PIN, -1, ROTARY_ENCODER_STEPS);
 
 SemaphoreHandle_t mutex_rtc;
 SemaphoreHandle_t mutex_display;
@@ -557,17 +556,13 @@ void updateSettings(){
 
     String jO = JSON.stringify(jObject);
     if(_settingsHash != simpleHash(jO.c_str())) {
-        uint32_t now = millis();
-        if (now > _lastSettingsUpdate + 5000) { //only update max. every 5 seconds
-            File file = SD_MMC.open("/settings.json", "w", false);
-            if(!file) {
-                log_e("file \"settings.json\" not found");
-                return;
-            }
-            file.print(jO);
-            _settingsHash = simpleHash(jO.c_str());
-            _lastSettingsUpdate = now;
+        File file = SD_MMC.open("/settings.json", "w", false);
+        if(!file) {
+            log_e("file \"settings.json\" not found");
+            return;
         }
+        file.print(jO);
+        _settingsHash = simpleHash(jO.c_str());
     }
 }
 // clang-format on
@@ -1774,11 +1769,11 @@ void setup() {
         }
     }
     Serial.print("\n\n");
-    rotaryEncoder.areEncoderPinsPulldownforEsp32 = false;
-    rotaryEncoder.begin();
-    rotaryEncoder.setup(readEncoderISR);
-    rotaryEncoder.setBoundaries(0, _max_volume, false); //minValue, maxValue, circleValues true|false (when max go to min and vice versa)
-    rotaryEncoder.disableAcceleration();
+    rotaryEncoder->areEncoderPinsPulldownforEsp32 = false;
+    rotaryEncoder->begin();
+    rotaryEncoder->setup(readEncoderISR);
+    rotaryEncoder->setBoundaries(0, _max_volume, false); //minValue, maxValue, circleValues true|false (when max go to min and vice versa)
+    rotaryEncoder->disableAcceleration();
 
     mutex_rtc = xSemaphoreCreateMutex();
     mutex_display = xSemaphoreCreateMutex();
@@ -1914,7 +1909,7 @@ void setup() {
         setVolume(_cur_volume);
         _mute_volume = _cur_volume;
     }
-    rotaryEncoder.setEncoderValue(_cur_volume); //set start value
+    rotaryEncoder->setEncoderValue(_cur_volume); //set start value
 
     showHeadlineItem(RADIO);
     if(_cur_station > 0) setStation(_cur_station);
@@ -2865,12 +2860,11 @@ void loop() {
     ftpSrv.handleFTP();
     soap.loop();
 
-    if (rotaryEncoder.encoderChanged()) {
-        long newRotVal = rotaryEncoder.readEncoder();
+    if (rotaryEncoder->encoderChanged()) {
+        long newRotVal = rotaryEncoder->readEncoder();
         //log_i("New rotary encoder value: %i; Rotary Mode: %i, Volume: %i, Station: %i", newRotVal, _rotaryMode, _cur_volume, _cur_station);
         if (_rotaryMode == 0) {
             setVolume((uint8_t)newRotVal);
-            showHeadlineVolume();
         }
         else if (_rotaryMode == 1) {
             _prev_station = _cur_station;
@@ -2880,7 +2874,7 @@ void loop() {
             _timeCounter.factor = 1.0;   
         }
     }
-    if (rotaryEncoder.isEncoderButtonClicked()) {
+    if (rotaryEncoder->isEncoderButtonClicked()) {
         rotary_onButtonClick();
     }
 
@@ -3089,7 +3083,7 @@ void loop() {
                 }
             }
         }
-        updateSettings();
+        if (_rotaryMode == 0) { updateSettings(); }
     }
 
     if(_f_1min == true) {
@@ -4302,7 +4296,7 @@ void dlna_item(bool lastItem, String name, String id, size_t size, String uri, b
 }
 
 void IRAM_ATTR readEncoderISR() {
-    rotaryEncoder.readEncoder_ISR();
+    rotaryEncoder->readEncoder_ISR();
 }
 
 void rotary_onButtonClick() {
@@ -4330,41 +4324,41 @@ void rotary_onButtonClick() {
 void setRotaryMode(uint8_t mode) {
     _rotaryMode = mode;
     if (mode == 0) {
-        rotaryEncoder.setBoundaries(0, _max_volume, false);
-        rotaryEncoder.setEncoderValue(_cur_volume);    
+        rotaryEncoder->setBoundaries(0, _max_volume, false);
+        rotaryEncoder->setEncoderValue(_cur_volume);    
     }
     else if (mode == 1) {
-        rotaryEncoder.setBoundaries(1, _sum_stations, false);
-        rotaryEncoder.setEncoderValue(_cur_station);       
+        rotaryEncoder->setBoundaries(1, _sum_stations, false);
+        rotaryEncoder->setEncoderValue(_cur_station);       
     }
     //log_i("Changed Rotary Mode to: %i, Volume: %i, Station: %id", _rotaryMode, _cur_volume, _cur_station);
 }
 
 void highlightCurrentStationInList() {
-    xSemaphoreTake(mutex_display, portMAX_DELAY);
-
     uint8_t lineHight = _winWoHF.h / 10;
     uint8_t staListPos;
     String content;
     int32_t idx;
     
     //log_i("highlight before: _prev_station: %i, _cur_station: %i", _prev_station, _cur_station);
+    xSemaphoreTake(mutex_display, portMAX_DELAY);
+ 
     if (_prev_station > 0) {
         staListPos = _prev_station -1;
-        tft.setCursor(10, _winFooter.h + (staListPos) * lineHight);
         sprintf(_chbuf, "station_%03d", _prev_station);
         content = stations.getString(_chbuf, " #not_found");
         idx = content.indexOf("#");
         sprintf(_chbuf, ANSI_ESC_YELLOW"%03d " ANSI_ESC_WHITE "%s\n",_prev_station, content.substring(0, idx).c_str());
+        tft.setCursor(10, _winFooter.h + (staListPos) * lineHight);
         tft.writeText((uint8_t*)_chbuf, -1, -1, true);
     }
 
     staListPos = _cur_station - 1;
-    tft.setCursor(10, _winFooter.h + (staListPos) * lineHight);
     sprintf(_chbuf, "station_%03d", _cur_station);
     content = stations.getString(_chbuf, " #not_found");
     idx = content.indexOf("#");
     sprintf(_chbuf, ANSI_ESC_YELLOW"%03d " ANSI_ESC_GREEN "%s\n",_cur_station, content.substring(0, idx).c_str());
+    tft.setCursor(10, _winFooter.h + (staListPos) * lineHight);
     tft.writeText((uint8_t*)_chbuf, -1, -1, true);
     xSemaphoreGive(mutex_display);
 }
