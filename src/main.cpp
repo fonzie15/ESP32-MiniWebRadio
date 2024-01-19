@@ -67,6 +67,7 @@ uint16_t       _sum_stations = 0;
 uint32_t       _resumeFilePos = 0;        //
 uint32_t       _playlistTime = 0;         // playlist start time millis() for timeout
 uint32_t       _settingsHash = 0;
+uint32_t       _lastSettingsUpdate = 0;
 uint32_t       _audioFileSize = 0;
 uint32_t       _media_downloadPort = 0;
 const char*    _pressBtn[8];
@@ -556,13 +557,17 @@ void updateSettings(){
 
     String jO = JSON.stringify(jObject);
     if(_settingsHash != simpleHash(jO.c_str())) {
-        File file = SD_MMC.open("/settings.json", "w", false);
-        if(!file) {
-            log_e("file \"settings.json\" not found");
-            return;
+        uint32_t now = millis();
+        if (now > _lastSettingsUpdate + 5000) { //only update max. every 5 seconds
+            File file = SD_MMC.open("/settings.json", "w", false);
+            if(!file) {
+                log_e("file \"settings.json\" not found");
+                return;
+            }
+            file.print(jO);
+            _settingsHash = simpleHash(jO.c_str());
+            _lastSettingsUpdate = now;
         }
-        file.print(jO);
-        _settingsHash = simpleHash(jO.c_str());
     }
 }
 // clang-format on
@@ -953,7 +958,7 @@ void updateSleepTime(boolean noDecrement) { // decrement and show new value in f
     }
 }
 void showVolumeBar() {
-    uint16_t val = tft.width() * getvolume() / 21;
+    uint16_t val = tft.width() * getvolume() / _max_volume;
     clearVolBar();
     tft.fillRect(_winVolBar.x, _winVolBar.y + 1, val, _winVolBar.h - 2, TFT_RED);
     tft.fillRect(val + 1, _winVolBar.y + 1, tft.width() - val + 1, _winVolBar.h - 2, TFT_GREEN);
@@ -1769,10 +1774,11 @@ void setup() {
         }
     }
     Serial.print("\n\n");
+    rotaryEncoder.areEncoderPinsPulldownforEsp32 = false;
     rotaryEncoder.begin();
     rotaryEncoder.setup(readEncoderISR);
     rotaryEncoder.setBoundaries(0, _max_volume, false); //minValue, maxValue, circleValues true|false (when max go to min and vice versa)
-    rotaryEncoder.setAcceleration(10);
+    rotaryEncoder.disableAcceleration();
 
     mutex_rtc = xSemaphoreCreateMutex();
     mutex_display = xSemaphoreCreateMutex();
@@ -2863,13 +2869,13 @@ void loop() {
         long newRotVal = rotaryEncoder.readEncoder();
         //log_i("New rotary encoder value: %i; Rotary Mode: %i", newRotVal, _rotaryMode);
         if (_rotaryMode == 0) {
-            if (newRotVal > _cur_volume)
-                upvolume();
-            else
-                downvolume();
+            //log_i("New rotary encoder value: %i; Rotary Mode: %i, Volume: %i", newRotVal, _rotaryMode, _cur_volume);
+            setVolume((uint8_t)newRotVal);
+            showHeadlineVolume();
         }
         else if (_rotaryMode == 1) {
             //mark current selected station
+            //log_i("New rotary encoder value: %i; Rotary Mode: %i, Prev Sta: %i, Curr Sta: %i", newRotVal, _rotaryMode, _prev_station, _cur_station);
             _prev_station = _cur_station;
             _cur_station = (uint16_t)newRotVal;
             highlightCurrentStationInList();
@@ -4319,8 +4325,8 @@ void rotary_onButtonClick() {
     }
     else if (_rotaryMode == 1) {        // change mode back to volume select
         setRotaryMode(0);
-        setStation(_cur_station);
         changeState(RADIO);
+        setStation(_cur_station);
     }
 }
 
@@ -4334,6 +4340,7 @@ void setRotaryMode(uint8_t mode) {
         rotaryEncoder.setBoundaries(1, _sum_stations, false);
         rotaryEncoder.setEncoderValue(_cur_station);       
     }
+    //log_i("Changed Rotary Mode to: %i, Volume: %i, Station: %id", _rotaryMode, _cur_volume, _cur_station);
 }
 
 void highlightCurrentStationInList() {
