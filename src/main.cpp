@@ -2875,7 +2875,6 @@ void loop() {
             highlightCurrentStationInList();
             _timeCounter.timer = 10;
             _timeCounter.factor = 1.0;   
-            log_i("_prev_station: %i, _cur_station: %i", _prev_station, _cur_station);
         }
     }
     if (rotaryEncoder.isEncoderButtonClicked()) {
@@ -4313,14 +4312,15 @@ void rotary_onButtonClick() {
 
     if (_rotaryMode == 0) {             // change mode to station select
         _prev_station = 0;
+        stopSong();
         changeState(STATIONSLIST);
-        highlightCurrentStationInList();
         setRotaryMode(1);
+        highlightCurrentStationInList();
     }
     else if (_rotaryMode == 1) {        // change mode back to volume select
+        setRotaryMode(0);
         setStation(_cur_station);
         changeState(RADIO);
-        setRotaryMode(0);
     }
 }
 
@@ -4331,7 +4331,7 @@ void setRotaryMode(uint8_t mode) {
         rotaryEncoder.setEncoderValue(_cur_volume);    
     }
     else if (mode == 1) {
-        rotaryEncoder.setBoundaries(1, _sum_stations, true);
+        rotaryEncoder.setBoundaries(1, _sum_stations, false);
         rotaryEncoder.setEncoderValue(_cur_station);       
     }
 }
@@ -4342,7 +4342,7 @@ void highlightCurrentStationInList() {
     String content;
     int32_t idx;
 
-    log_i("highlight: _prev_station: %i, _cur_station: %i", _prev_station, _cur_station);
+    log_i("highlight before: _prev_station: %i, _cur_station: %i", _prev_station, _cur_station);
     if (_prev_station > 0) {
         staListPos = _prev_station -1;
         tft.setCursor(10, _winFooter.h + (staListPos) * lineHight);
