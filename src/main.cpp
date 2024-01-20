@@ -4337,27 +4337,19 @@ void setRotaryMode(uint8_t mode) {
 void highlightCurrentStationInList() {
     uint8_t lineHight = _winWoHF.h / 10;
     uint8_t staListPos;
-    String content;
-    int32_t idx;
     
     //log_i("highlight before: _prev_station: %i, _cur_station: %i", _prev_station, _cur_station);
     xSemaphoreTake(mutex_display, portMAX_DELAY);
  
     if (_prev_station > 0) {
         staListPos = _prev_station -1;
-        sprintf(_chbuf, "station_%03d", _prev_station);
-        content = stations.getString(_chbuf, " #not_found");
-        idx = content.indexOf("#");
-        sprintf(_chbuf, ANSI_ESC_YELLOW"%03d " ANSI_ESC_WHITE "%s\n",_prev_station, content.substring(0, idx).c_str());
+        sprintf(_chbuf, ANSI_ESC_YELLOW"%03d ", _prev_station);
         tft.setCursor(10, _winFooter.h + (staListPos) * lineHight);
         tft.writeText((uint8_t*)_chbuf, -1, -1, true);
     }
 
     staListPos = _cur_station - 1;
-    sprintf(_chbuf, "station_%03d", _cur_station);
-    content = stations.getString(_chbuf, " #not_found");
-    idx = content.indexOf("#");
-    sprintf(_chbuf, ANSI_ESC_YELLOW"%03d " ANSI_ESC_GREEN "%s\n",_cur_station, content.substring(0, idx).c_str());
+    sprintf(_chbuf, ANSI_ESC_GREEN"%03d ", _cur_station);
     tft.setCursor(10, _winFooter.h + (staListPos) * lineHight);
     tft.writeText((uint8_t*)_chbuf, -1, -1, true);
     xSemaphoreGive(mutex_display);
