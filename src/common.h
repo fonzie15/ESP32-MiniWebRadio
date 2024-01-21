@@ -93,7 +93,7 @@
         #define ROTARY_ENCODER_A_PIN 34
         #define ROTARY_ENCODER_B_PIN 36
         #define ROTARY_ENCODER_BUTTON_PIN 4
-        #define ROTARY_ENCODER_STEPS 2
+        #define ROTARY_ENCODER_STEPS 4
 #endif
 
 #ifdef CONFIG_IDF_TARGET_ESP32S3
