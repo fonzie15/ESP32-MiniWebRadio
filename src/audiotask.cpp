@@ -359,6 +359,7 @@ void audioTask(void *parameter) {
     audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT, I2S_MCLK);
     audio.setI2SCommFMT_LSB(I2S_COMM_FMT);
     audio.setVolume(5); // 0...21
+    audio.setVolumeSteps(40);
 
     while(true){
         if(xQueueReceive(audioSetQueue, &audioRxTaskMessage, 1) == pdPASS) {

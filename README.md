@@ -1,80 +1,54 @@
-# ESP32-MiniWebRadio V2
+# ESP32-MiniWebRadio V2 with Rotary Encoder support
+based on <a href="https://github.com/schreibfaul1/ESP32-MiniWebRadio">ESP32-MiniWebRadio V2</a> by @[schreibfaul1](https://github.com/schreibfaul1)
 
-![Display](additional_info/MiniWebRadio.jpg)
 
-MiniWebRadio Features:
+**Additional feature description**
+
+A rotary encoder is used for setting volume and choosing stations. In this use case, only Internet Radio mode is used. The reason for a rotary encoder (or physical UI elements in general) is better system response and usability in my opinion. The goal was to add the rotary encoder to the (great working) existing system while current user input via touchscreen is still possible.
+
+**Used hardware in this case**
 <ul>
-<li>User interfaces: TFT touchscreen display, web browser and FTP</li>
-<li>Functions: WiFi Radio, Digital Clock, MP3 player, Alarm, Sleep timer, adjust screen brightness, EQ settings and Volume, web browser User Interface, access SD card via FTP (e.g. FileZilla), IR remote controller support</li>
-<li>Up to 999 pre-set stations can be held in stations.csv file on SD card (can edit using web UI)</li>
-<li>Each station can display its own station icon (when saved to SD card)</li>
-<li>Time is obtained via Network Time Protocol (NTP) from internet. Local Time Zone can be set from web UI</li>
-<li>Web UI - MiniWebRadio can be accessed via any web browser (e.g. IE/Edge/Chrome/FireFox)</li>
-<li>Internal SD card can be accessed via FTP (e.g. FileZilla)</li>
-<li>Your home WiFi router SSID and password can be set using the browser on your smart phone (only required on first boot) or edit the networks.csv file on SD card</li>
-<li>Play audio files on SD card or on DLNA home network (via web UI)</li>
-<li>Use Infra-Red (IR) remote controller (38kHz NEC-encoded - e.g. arduino or mp3 remote). The web UI allows you to configure the buttons if required</li>
-<li>One Alarm time can be pre-set using display (choose days, Monday-Sunday)</li>
-<li>A Sleep timer can be set using display (switches off sound and screen after a pre-set time - max. 6 hours)</li>
-<li>Can announce the time each hour when in radio mode (set via web UI)</li>
-<li>Screen brightness can be adjusted using display (if the display has a backlight-pin)</li>
-<li>Supports the Latin, Greek and Cyrillic character sets</li>
-<li><a href="https://www.radio-browser.info/">Community Radio Browser</a> is integrated as a search engine. User can find new stations and then add them to the station list via web UI (with station icon if available) and then save the list and station icon file to the SD card</li>
-<li>Channel lists can be exported or imported in Excel format (for data backup).</li>
-</ul><br>
-Required HW:
+<li>AI-Thinker ESP32-A1S Audiokit development board</li>
+<li>TFT Display with Touchpad (SPI) ILI9486 (480x320px) (Raspberry Pi style)</li>
+<li>KY-040 Rotary Encoder module, like <a href="https://www.amazon.de/gp/product/B079H3C98M/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&psc=1">this</a> or <a href="https://www.aliexpress.com/item/32790788377.html?spm=a2g0o.productlist.main.37.608764fdDN9aeJ&algo_pvid=baf94bfe-c75e-4d30-9a6f-6201872b6daf&algo_exp_id=baf94bfe-c75e-4d30-9a6f-6201872b6daf-18&pdp_npi=4%40dis%21EUR%210.58%210.51%21%21%210.62%210.55%21%402101effb17060202289143107eb6c4%2112000037069013103%21sea%21AT%21701706746%21&curPageLogUid=KQkBQiDhZ6ex&utparam-url=scene%3Asearch%7Cquery_from%3A">this</a><br>
+Note: I observed that on some modules one of the 3 pullup resistors are not populated. This resulted in poor results when reading the button state. I therefore recommend populating this resistor (e.g. 10k) or at least thinking about it if problems arise with the detection of the key press.
+See picture of the <a href="additional_info/MiniWebRadioV2KY040Rear.jpg">Encoder bottom PCB side</a>.</li>  
+<li>no IR receiver is used, there is no free GPIO left</li>
+</ul>
+
+**Hardware modification**
+Unfortunately the number of usable GPIOs is very limited on this board. To free up 3 GPIOs for the rotary encoder, the following modifications were made to the board (in addition to the mods described by schreibfaul1):
 <ul>
-<li>ESP32 or ESP32-S3 board with PSRAM</li><li>Decoder module VS1053 or external DAC (e.g. PCM5102a, CS4344, PT8211, AC101, ES8388, WM8978 ...)</li>
-<li>TFT Display with Touchpad (SPI), Display controller can be ILI9341 (320x240px), HX8347D (320x240px), ILI9486 (480x320px), ILI9488 (480x320px) or ST7796 (480x320px)</li>
-<li>SD Card (FAT32) + SD adapter (can use SD slot on back of TFT display if available)</li>
-<li>IR receiver + IR remote controller (optional)
-<li>Note: if using a VS1053, VS1053_SCK may need a 1k resistor connected to ground in order to boot</li>
-</ul><br>
+<li>Removed R53, which isolates IO36 from pullup resistors and debouncing cap</li>
+<li>Removed R29, which isolates IO34 from sd card reader (normally used for SD detect, which is not needed in this project)</li>
+<li>Removed R28, which isolates IO4 from sd card reader (normally used for SD data1 line, which is not needed in this project)</li>
+<li>connected wires to IO4, IO34 and IO36 directly at the module pads - this was the easiest way for me</li>
+</ul>
 
-Control is via the display touchscreen or a web page in a browser, no additional components such as switches, rotary encoders, capacitors or resistors are required.
+![AI Thinker ESP32-A1S Audiokit modification](additional_info/MiniWebRadioV2RotaryMod.jpg)
 
-Schematic with VS1053<br>
-![Schematic with VS1053](additional_info/MWR_V2_VS1053.jpg)<br>
 
-Schematic with external DAC<br>
-![Schematic with external DAC](additional_info/MWR_V2_DAC.jpg)<br>
-<br>
-<a href="https://github.com/schreibfaul1/ESP32-MiniWebRadio/blob/master/additional_info/MiniWebRadio%20V2%20Layout.pdf">Display (Layout)</a>
+**Software**
 
-<a href="https://github.com/schreibfaul1/ESP32-MiniWebRadio/blob/master/additional_info/How%20to%20install.pdf">How to install:</a>
-PlatformIO is definitely recommended as the IDE.
+I've used [this](https://github.com/igorantolic/ai-esp32-rotary-encoder) library from @[Igor](https://github.com/igorantolic) for the encoder. The pinout is defined in the macro section of common.h with the following lines: 
+```
+#define ROTARY_ENCODER_A_PIN 34
+#define ROTARY_ENCODER_B_PIN 36
+#define ROTARY_ENCODER_BUTTON_PIN 4
+#define ROTARY_ENCODER_STEPS 4
+```
+If you want to change the direction of the encoder, just swap DT/CLK pins in software or hardware.
+If you encounter issues with readings, you may tweak the `ROTARY_ENCODER_STEPS` value. More information is found in the documentation of the rotary encoder library. 
 
-#### New in V2:
 
-- The audioprocess works in its own task and is decoupled. If a VS1053 is used, it must have its own SPI bus (VS1053 uses HSPI - TFT uses VSPI). This prevents dropouts when drawing on the display or when the website is loading.
-- The SD card is wired as SD_MMC to improve stability and increase speed. This means that the GPIOs cannot be chosen freely. The <a href="https://github.com/schreibfaul1/ESP32-MiniWebRadio/blob/master/additional_info/SD_Card_Adapter_for_SD_MMC_.jpg">SD card adapter</a> must not have any resistors as pull-ups or in series. For best display update speed, use 40MHz frequency for SD card if possible (SDMMC_FREQUENCY 40000000 in common.h).
-- Audio can be decoded using software and a DAC instead of VS1053 decoder board. Possible formats are mp3, aac, mp4 and flac (flac requires PSRAM). DAC (e.g. UDA13348, MAX98357A, PCM5102A) is connected via I2S. AC101, ES8388 and WM8978 (TTGO audioT board) audio decoder boards are also supported
-- 480x320px display supported. The ILI9486 (SPI display from the Raspberry PI) is also supported
-- The SD card files can be accessed via FTP. See settings for <a href="https://github.com/schreibfaul1/ESP32-MiniWebRadio/blob/master/additional_info/Filezilla.pdf">Filezilla</a>. The username and password are 'esp32' (this can be changed in 'common.h')
-- Access Point SSID/password can be set using mobile phone browser - no need to modify source code or networks.csv file on SD card
-- Stations URLs support entry of username and password if the server expects access data, "URL|user|pwd"
-- Can process local playlists in m3u format
-- Either the ESP32 or the ESP32-S3 can be used (PSRAM is highly recommended)
-- IR remote button codes can be changed by user using web UI
-- Improved web UI reliability
-- VU meter added to display
-- Timezone can be set using web UI
-- Play media files on home network DLNA (uPNP/DLNA app on smart phone, router, etc.)
-- Prevent clicks when changing radio stations
+**Cabling**
 
-<br>
-
-Codec\Decoder| VS1053B        | PCM5102A, AC101, ES8388, WM8978 |
+Rotary Module Pin | AI Thinker ESP32-A1S Audiokit | Comment |
 |----------|----------|----------|
-| mp3 | y| y |
-| aac | y | y |
-| aacp (HLS) | y  | mono |
-| wav | y | y  |
-| flac | with plugin | blocksize max 8192 bytes |
-| vorbis | y  | y (<=196Kbit/s)  |
-| m4a | y  | y |
-| opus | n  | y (celt)  |
+| GND | GND | via GPIO header |
+| 3.3V | 3.3V |  via GPIO header |
+| SW | IO4 | via wire soldered to module (see remarks above) |
+| DT | IO34 | via wire soldered to module (see remarks above) |
+| CLK | IO36 | via wire soldered to module (see remarks above) |
 
-![MWR](/additional_info/MWR.jpg)<br>
-<br>
-
+[Rotary Module Pinout](additional_info/MiniWebRadioV2KY040Pinout.jpg)

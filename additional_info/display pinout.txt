@@ -1,0 +1,17 @@
+---------------------------------------------------------------------------
+| Name                        | AudioKit Pin | RPi 3.5"    | 2.8" ILI9341 |
+|                             |              | ILI9486b Pin|          Pin |
+|-----------------------------|--------------|-------------|--------------|
+| TP Chip Select CS           |      MTDI 12 |          26 |          N/A |
+| TP IRQ                      |      MTCK 13 |          11 |          N/A |
+| TFT Chip Select CS          |           22 |          24 |           CS |
+| TFT Data Register Select DC |            5 |          18 |           DC |
+| TFT TP MOSI                 |           23 |          19 |   SDI (MOSI) |
+| TFT TP MISO                 |           19 |          21 |   SDO (MISO) |
+| TFT TP SCK                  |           18 |          23 |          SCK |
+| TFT Backlight               |      MTCK 13 |         N/A |          LED |
+| GND                         |          GND |           6 |          GND |
+| RST                         |          RST |          22 |        RESET |
+| 5V                          |           5V |           2 |          N/A |
+| 3.3V                        |         3.3V |           1 |          VCC |
+---------------------------------------------------------------------------

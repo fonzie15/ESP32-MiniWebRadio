@@ -1,17 +1,23 @@
 // created: 10.Feb.2022
 // updated: 12.Oct.2023
 
+// JAR: Used Display: 3,5" RPi Display from Elegoo with XPT2046 Touch Controller (https://www.amazon.de/gp/product/B01JRUH0CY/ref=ppx_yo_dt_b_asin_title_o00_s02?ie=UTF8&psc=1, https://www.elegoo.com/products/elegoo-3-5-inch-tft-lcd-screen)
+//                    Driver: https://download.elegoo.com/03%20Other%20Kits/06%203.5-inch%20Screen/ELEGOO%203.5%20Inch%20Touch%20Screen%20User%20Manual%20V1.0.2022.08.02.zip
+//                            https://drive.google.com/file/d/1DIZuPjzjg7gkt929Sbob2Ghhu8IlSXHg/view?usp=sharing 
+//      Removed Resistors from Audiokit Board as advised
+//      Pinout: see pinout.txt
+
 #pragma once
 #pragma GCC optimize("Os") // optimize for code size
 
 #define _SSID               "mySSID"                        // Your WiFi credentials here
 #define _PW                 "myWiFiPassword"                //
-#define DECODER             1                               // (0)VS1053 , (1)MAX98357A PCM5102A CS4344... (2)AC101, (3)ES8388, (4)WM8978
-#define TFT_CONTROLLER      4                               // (0)ILI9341, (1)HX8347D, (2)ILI9486a, (3)ILI9486b, (4)ILI9488, (5)ST7796, (6)ST7796RPI
+#define DECODER             2                               // (0)VS1053 , (1)MAX98357A PCM5102A CS4344... (2)AC101, (3)ES8388, (4)WM8978
+#define TFT_CONTROLLER      3                               // (0)ILI9341, (1)HX8347D, (2)ILI9486a, (3)ILI9486b, (4)ILI9488, (5)ST7796, (6)ST7796RPI
 #define DISPLAY_INVERSION   0                               // (0) off (1) on
 #define TFT_ROTATION        1                               // 1 or 3 (landscape)
-#define TFT_FREQUENCY       40000000                        // 80000000, 40000000, 27000000, 20000000, 10000000
-#define TP_VERSION          4                               // (0)ILI9341, (1)ILI9341RPI, (2)HX8347D, (3)ILI9486, (4)ILI9488, (5)ST7796, (3)ST7796RPI
+#define TFT_FREQUENCY       27000000                        // 80000000, 40000000, 27000000, 20000000, 10000000
+#define TP_VERSION          3                               // (0)ILI9341, (1)ILI9341RPI, (2)HX8347D, (3)ILI9486, (4)ILI9488, (5)ST7796, (3)ST7796RPI
 #define TP_ROTATION         1                               // 1 or 3 (landscape)
 #define AUDIOTASK_CORE      1                               // 0 or 1
 #define AUDIOTASK_PRIO      2                               // 0 ... 24  Priority of the Task (0...configMAX_PRIORITIES -1)
@@ -49,28 +55,29 @@
 #include "WM8978.h"
 #include "SoapESP32.h"
 #include "Arduino_JSON.h"
+#include "AiEsp32RotaryEncoder.h"
 
 #ifdef CONFIG_IDF_TARGET_ESP32
     // Digital I/O used
         #define TFT_CS        22
-        #define TFT_DC        21
-        #define TFT_BL        32  // at -1 the brightness menu is not displayed
-        #define TP_IRQ        39  // VN
-        #define TP_CS          5
+        #define TFT_DC        5
+        #define TFT_BL        -1  // at -1 the brightness menu is not displayed
+        #define TP_IRQ        13  // VN
+        #define TP_CS         12
         #define SD_MMC_D0      2  // cannot be changed
         #define SD_MMC_CLK    14  // cannot be changed
         #define SD_MMC_CMD    15  // cannot be changed
-        #define IR_PIN        35
+        #define IR_PIN        -1
         #define TFT_MOSI      23  // TFT and TP (VSPI)
         #define TFT_MISO      19  // TFT and TP (VSPI)
         #define TFT_SCK       18  // TFT and TP (VSPI)
     #if DECODER == 0
-        #define VS1053_CS     33
-        #define VS1053_DCS     4
-        #define VS1053_DREQ   36
-        #define VS1053_MOSI   13  // VS1053     (HSPI)
-        #define VS1053_MISO   34  // VS1053     (HSPI)
-        #define VS1053_SCK    12  // VS1053     (HSPI) (sometimes we need a 1k resistor against ground)
+        #define VS1053_CS     -1
+        #define VS1053_DCS    -1
+        #define VS1053_DREQ   -1
+        #define VS1053_MOSI   -1  // VS1053     (HSPI)
+        #define VS1053_MISO   -1  // VS1053     (HSPI)
+        #define VS1053_SCK    -1  // VS1053     (HSPI) (sometimes we need a 1k resistor against ground)
     #else
         #define I2S_DOUT      25
         #define I2S_DIN       -1  // pin not used
@@ -78,11 +85,15 @@
         #define I2S_LRC       26
         #define I2S_MCLK       0  // mostly not used
     #endif
-        #define I2C_DATA      -1  // some DACs are controlled via I2C
-        #define I2C_CLK       -1
+        #define I2C_DATA      33  // some DACs are controlled via I2C
+        #define I2C_CLK       32
         #define SD_DETECT     -1  // some pins on special boards: Lyra, Olimex, A1S ...
-        #define HP_DETECT     -1
-        #define AMP_ENABLED   -1
+        #define HP_DETECT     39
+        #define AMP_ENABLED   21
+        #define ROTARY_ENCODER_A_PIN 34
+        #define ROTARY_ENCODER_B_PIN 36
+        #define ROTARY_ENCODER_BUTTON_PIN 4
+        #define ROTARY_ENCODER_STEPS 4
 #endif
 
 #ifdef CONFIG_IDF_TARGET_ESP32S3
@@ -229,12 +240,16 @@ void           connecttohost(const char* host);
 void           connecttoFS(const char* filename, uint32_t resumeFilePos = 0);
 void           stopSong();
 void IRAM_ATTR headphoneDetect();
+void IRAM_ATTR readEncoderISR();
 int32_t        DLNA_setCurrentServer(String serverName);
 void           DLNA_showServer();
 void           DLNA_browseServer(String objectId, uint8_t level);
 void           DLNA_getFileItems(String uri);
 void           DLNA_showContent(String objectId, uint8_t level);
 void           showDlnaItemsList(uint8_t level, uint16_t itemNr);
+void           rotary_onButtonClick();
+void           setRotaryMode(uint8_t mode);
+void           highlightCurrentStationInList();
 
 //prototypes (audiotask.cpp)
 void audioInit();

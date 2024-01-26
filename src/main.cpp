@@ -25,7 +25,7 @@
 // clang-format on
 
 // global variables
-const uint8_t  _max_volume = 21;
+const uint8_t  _max_volume = 20;
 const uint16_t _max_stations = 1000;
 int8_t         _releaseNr = -1;
 int8_t         _currentServer = -1;
@@ -48,6 +48,7 @@ uint8_t        _fileListPos = 0;
 uint16_t       _fileListNr = 0;
 uint8_t        _itemListPos = 0;          // DLNA items
 uint16_t       _itemListNr = 0;
+uint8_t        _rotaryMode = 0;           // current Rotary mode: 0 = volume; 1 = radio station select 
 int16_t        _alarmtime = 0;            // in minutes (23:59 = 23 *60 + 59)
 int16_t        _toneha = 0;               // BassFreq 0...15        VS1053
 int16_t        _tonehf = 0;               // TrebleGain 0...14      VS1053
@@ -59,6 +60,7 @@ int16_t        _toneHP = 0;               // -40 ... +6 (dB)        audioI2S
 uint16_t       _icyBitRate = 0;           // from http response header via event
 uint16_t       _avrBitRate = 0;           // from decoder via getBitRate(true)
 uint16_t       _cur_station = 0;          // current station(nr), will be set later
+uint16_t       _prev_station = 0;          // current station(nr), will be set later
 uint16_t       _cur_AudioFileNr = 0;      // position inside _SD_content
 uint16_t       _sleeptime = 0;            // time in min until MiniWebRadio goes to sleep
 uint16_t       _sum_stations = 0;
@@ -210,6 +212,8 @@ ES8388 dac;
 #if DECODER == 4 // wm8978
 WM8978 dac;
 #endif
+
+AiEsp32RotaryEncoder* rotaryEncoder = new AiEsp32RotaryEncoder(ROTARY_ENCODER_A_PIN, ROTARY_ENCODER_B_PIN, ROTARY_ENCODER_BUTTON_PIN, -1, ROTARY_ENCODER_STEPS);
 
 SemaphoreHandle_t mutex_rtc;
 SemaphoreHandle_t mutex_display;
@@ -949,7 +953,7 @@ void updateSleepTime(boolean noDecrement) { // decrement and show new value in f
     }
 }
 void showVolumeBar() {
-    uint16_t val = tft.width() * getvolume() / 21;
+    uint16_t val = tft.width() * getvolume() / _max_volume;
     clearVolBar();
     tft.fillRect(_winVolBar.x, _winVolBar.y + 1, val, _winVolBar.h - 2, TFT_RED);
     tft.fillRect(val + 1, _winVolBar.y + 1, tft.width() - val + 1, _winVolBar.h - 2, TFT_GREEN);
@@ -1771,6 +1775,12 @@ void setup() {
         }
     }
     Serial.print("\n\n");
+    rotaryEncoder->areEncoderPinsPulldownforEsp32 = false;
+    rotaryEncoder->begin();
+    rotaryEncoder->setup(readEncoderISR);
+    rotaryEncoder->setBoundaries(0, _max_volume, false); //minValue, maxValue, circleValues true|false (when max go to min and vice versa)
+    rotaryEncoder->disableAcceleration();
+
     mutex_rtc = xSemaphoreCreateMutex();
     mutex_display = xSemaphoreCreateMutex();
     SerialPrintfln("   ");
@@ -1812,7 +1822,7 @@ void setup() {
     tp.TP_Send(0x90); // Remove any blockage
 
     SerialPrintfln("setup: ....  Init SD card");
-    pinMode(IR_PIN, INPUT_PULLUP); // if ir_pin is read only, have a external resistor (~10...40KOhm)
+    if (IR_PIN >= 0) pinMode(IR_PIN, INPUT_PULLUP); // if ir_pin is read only, have a external resistor (~10...40KOhm)
     pinMode(SD_MMC_D0, INPUT_PULLUP);
 #ifdef CONFIG_IDF_TARGET_ESP32S3
     SD_MMC.setPins(SD_MMC_CLK, SD_MMC_CMD, SD_MMC_D0);
@@ -1905,6 +1915,7 @@ void setup() {
         setVolume(_cur_volume);
         _mute_volume = _cur_volume;
     }
+    rotaryEncoder->setEncoderValue(_cur_volume); //set start value
 
     showHeadlineItem(RADIO);
     if(_cur_station > 0) setStation(_cur_station);
@@ -2076,19 +2087,19 @@ void           setVolume(uint8_t vol) {
 
 #if DECODER > 1 // ES8388, AC101 ...
     if(HP_DETECT == -1) {
-        dac.SetVolumeSpeaker(_cur_volume * 3);
-        dac.SetVolumeHeadphone(_cur_volume * 3);
+        dac.SetVolumeSpeaker(_cur_volume * 2);
+        dac.SetVolumeHeadphone(_cur_volume * 2);
     }
     else {
         if(digitalRead(HP_DETECT) == HIGH) {
             // SerialPrintfln("HP_Detect = High, volume %i", vol);
-            dac.SetVolumeSpeaker(_cur_volume * 3);
+            dac.SetVolumeSpeaker(_cur_volume * 2);
             dac.SetVolumeHeadphone(0);
         }
         else {
             // SerialPrintfln("HP_Detect = Low, volume %i", vol);
             dac.SetVolumeSpeaker(1);
-            dac.SetVolumeHeadphone(_cur_volume * 3);
+            dac.SetVolumeHeadphone(_cur_volume * 2);
         }
     }
 #endif
@@ -2854,6 +2865,25 @@ void loop() {
     tp.loop();
     ftpSrv.handleFTP();
     soap.loop();
+
+    if (rotaryEncoder->encoderChanged()) {
+        long newRotVal = rotaryEncoder->readEncoder();
+        //log_i("New rotary encoder value: %i; Rotary Mode: %i, Volume: %i, Station: %i", newRotVal, _rotaryMode, _cur_volume, _cur_station);
+        if (_rotaryMode == 0) {
+            setVolume((uint8_t)newRotVal);
+        }
+        else if (_rotaryMode == 1) {
+            _prev_station = _cur_station;
+            _cur_station = (uint16_t)newRotVal;
+            highlightCurrentStationInList();
+            _timeCounter.timer = 10;
+            _timeCounter.factor = 1.0;   
+        }
+    }
+    if (rotaryEncoder->isEncoderButtonClicked()) {
+        rotary_onButtonClick();
+    }
+
     if(_f_muteDecrement) {
         if(_mute_volume > 0) {
             _mute_volume--;
@@ -2915,6 +2945,8 @@ void loop() {
                 drawImage(_chbuf, _winRSSID.x, _winRSSID.y);
             }
             if(!_timeCounter.timer) {
+                setRotaryMode(0);
+                if (_prev_station > 0) { setStation(_cur_station); }
                 showFooterRSSI(true);
                 if(     _state == RADIOico) { changeState(RADIO); }
                 else if(_state == RADIOmenue) { changeState(RADIO); }
@@ -3057,7 +3089,7 @@ void loop() {
                 }
             }
         }
-        updateSettings();
+        if (_rotaryMode == 0) { updateSettings(); }
     }
 
     if(_f_1min == true) {
@@ -4267,7 +4299,64 @@ void dlna_item(bool lastItem, String name, String id, size_t size, String uri, b
     _dlna_items.uri.push_back(x_ps_strdup(uri.c_str()));
     _dlna_items.isDir.push_back(isDir == true);
     _dlna_items.isAudio.push_back(isAudio == true);
+}
 
+void IRAM_ATTR readEncoderISR() {
+    rotaryEncoder->readEncoder_ISR();
+}
 
+void rotary_onButtonClick() {
+    //log_i("Rotary button clicked. ");
+    static unsigned long lastTimePressed = 0;
 
+    if (millis() - lastTimePressed < 200)
+        return;
+    lastTimePressed = millis();
+
+    if (_rotaryMode == 0) {             // change mode to station select
+        _prev_station = 0;
+        stopSong();
+        changeState(STATIONSLIST);
+        setRotaryMode(1);
+        highlightCurrentStationInList();
+    }
+    else if (_rotaryMode == 1) {        // change mode back to volume select
+        setRotaryMode(0);
+        changeState(RADIO);
+        setStation(_cur_station);
+    }
+}
+
+void setRotaryMode(uint8_t mode) {
+    _rotaryMode = mode;
+    if (mode == 0) {
+        rotaryEncoder->setBoundaries(0, _max_volume, false);
+        rotaryEncoder->setEncoderValue(_cur_volume);    
+    }
+    else if (mode == 1) {
+        rotaryEncoder->setBoundaries(1, _sum_stations, false);
+        rotaryEncoder->setEncoderValue(_cur_station);       
+    }
+    //log_i("Changed Rotary Mode to: %i, Volume: %i, Station: %id", _rotaryMode, _cur_volume, _cur_station);
+}
+
+void highlightCurrentStationInList() {
+    uint8_t lineHight = _winWoHF.h / 10;
+    uint8_t staListPos;
+    
+    //log_i("highlight before: _prev_station: %i, _cur_station: %i", _prev_station, _cur_station);
+    xSemaphoreTake(mutex_display, portMAX_DELAY);
+ 
+    if (_prev_station > 0) {
+        staListPos = _prev_station -1;
+        sprintf(_chbuf, ANSI_ESC_YELLOW"%03d ", _prev_station);
+        tft.setCursor(10, _winFooter.h + (staListPos) * lineHight);
+        tft.writeText((uint8_t*)_chbuf, -1, -1, true);
+    }
+
+    staListPos = _cur_station - 1;
+    sprintf(_chbuf, ANSI_ESC_GREEN"%03d ", _cur_station);
+    tft.setCursor(10, _winFooter.h + (staListPos) * lineHight);
+    tft.writeText((uint8_t*)_chbuf, -1, -1, true);
+    xSemaphoreGive(mutex_display);
 }
