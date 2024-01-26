@@ -17,7 +17,7 @@ See picture of the <a href="additional_info/MiniWebRadioV2KY040Rear.jpg">Encoder
 </ul>
 
 **Hardware modification**
-Unfortunately the number of usable GPIOs is very limited on this board. To free up 3 GPIOs for the rotary encoder, the following modifications were made to the board:
+Unfortunately the number of usable GPIOs is very limited on this board. To free up 3 GPIOs for the rotary encoder, the following modifications were made to the board (in addition to the mods described by schreibfaul1):
 <ul>
 <li>Removed R53, which isolates IO36 from pullup resistors and debouncing cap</li>
 <li>Removed R29, which isolates IO34 from sd card reader (normally used for SD detect, which is not needed in this project)</li>
