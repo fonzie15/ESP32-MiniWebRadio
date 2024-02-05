@@ -192,14 +192,14 @@ enum status {
 const char* codecname[10] = {"unknown", "WAV", "MP3", "AAC", "M4A", "FLAC", "AACP", "OPUS", "OGG", "VORBIS"};
 
 uint16_t btnValues[9][3] = {  {3800, 4000, 1},\
-    {1600, 1700, 2},\
-    {3500, 3700, 3},\
-    {1050, 1120, 4},\
-    {1800, 1900, 5},\
-    {2920, 3000, 6},\
-    {3100, 3170, 7},\
-    {750, 820, 8},\
-    {3410, 3450, 9},\
+    {1450, 1680, 2},\
+    {3401, 3500, 3},\
+    {950, 1055, 4},\
+    {1680, 1770, 5},\
+    {2800, 2990, 6},\
+    {3000, 3170, 7},\
+    {650, 800, 8},\
+    {3300, 3400, 9},\
 };
 
 Preferences pref;
@@ -4382,9 +4382,10 @@ void physicalButtonHandler() {
         val = analogRead(ROTARY_ENCODER_BUTTON_PIN);
         _lastButtonRead = now;
         if (val < 4000) {  // any button was pressed
+            log_i("Val: %d", val);
             for (int i= 0; i <= 8; i++) {
                 if ((btnValues[i][0] <= val) && (val <= btnValues[i][1])) {
-                    log_i("Catched BTN# %d. Val: %d", btnValues[i][2], val);
+                    log_i("Catched BTN# %d.", btnValues[i][2]);
                     i = 8;
                 }
             }
