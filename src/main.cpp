@@ -49,6 +49,7 @@ uint16_t       _fileListNr = 0;
 uint8_t        _itemListPos = 0;          // DLNA items
 uint16_t       _itemListNr = 0;
 uint8_t        _rotaryMode = 0;           // current Rotary mode: 0 = volume; 1 = radio station select 
+uint8_t        _lastButton = 0;
 int16_t        _alarmtime = 0;            // in minutes (23:59 = 23 *60 + 59)
 int16_t        _toneha = 0;               // BassFreq 0...15        VS1053
 int16_t        _tonehf = 0;               // TrebleGain 0...14      VS1053
@@ -69,6 +70,8 @@ uint32_t       _playlistTime = 0;         // playlist start time millis() for ti
 uint32_t       _settingsHash = 0;
 uint32_t       _audioFileSize = 0;
 uint32_t       _media_downloadPort = 0;
+uint32_t       _lastButtonPress = 0;
+uint32_t       _lastButtonRead = 0;
 const char*    _pressBtn[8];
 const char*    _releaseBtn[8];
 char           _chbuf[512];
@@ -188,6 +191,17 @@ enum status {
 
 const char* codecname[10] = {"unknown", "WAV", "MP3", "AAC", "M4A", "FLAC", "AACP", "OPUS", "OGG", "VORBIS"};
 
+uint16_t btnValues[9][3] = {  {3800, 4000, 1},\
+    {1600, 1700, 2},\
+    {3500, 3700, 3},\
+    {1050, 1120, 4},\
+    {1800, 1900, 5},\
+    {2920, 3000, 6},\
+    {3100, 3170, 7},\
+    {750, 820, 8},\
+    {3410, 3450, 9},\
+};
+
 Preferences pref;
 Preferences stations;
 WebSrv      webSrv;
@@ -213,7 +227,7 @@ ES8388 dac;
 WM8978 dac;
 #endif
 
-AiEsp32RotaryEncoder* rotaryEncoder = new AiEsp32RotaryEncoder(ROTARY_ENCODER_A_PIN, ROTARY_ENCODER_B_PIN, ROTARY_ENCODER_BUTTON_PIN, -1, ROTARY_ENCODER_STEPS);
+AiEsp32RotaryEncoder* rotaryEncoder = new AiEsp32RotaryEncoder(ROTARY_ENCODER_A_PIN, ROTARY_ENCODER_B_PIN, -1, -1, ROTARY_ENCODER_STEPS);
 
 SemaphoreHandle_t mutex_rtc;
 SemaphoreHandle_t mutex_display;
@@ -1780,6 +1794,7 @@ void setup() {
     rotaryEncoder->setup(readEncoderISR);
     rotaryEncoder->setBoundaries(0, _max_volume, false); //minValue, maxValue, circleValues true|false (when max go to min and vice versa)
     rotaryEncoder->disableAcceleration();
+    pinMode(ROTARY_ENCODER_BUTTON_PIN, INPUT_PULLUP);   
 
     mutex_rtc = xSemaphoreCreateMutex();
     mutex_display = xSemaphoreCreateMutex();
@@ -2880,9 +2895,8 @@ void loop() {
             _timeCounter.factor = 1.0;   
         }
     }
-    if (rotaryEncoder->isEncoderButtonClicked()) {
-        rotary_onButtonClick();
-    }
+    
+    physicalButtonHandler();
 
     if(_f_muteDecrement) {
         if(_mute_volume > 0) {
@@ -4359,4 +4373,22 @@ void highlightCurrentStationInList() {
     tft.setCursor(10, _winFooter.h + (staListPos) * lineHight);
     tft.writeText((uint8_t*)_chbuf, -1, -1, true);
     xSemaphoreGive(mutex_display);
+}
+
+void physicalButtonHandler() {
+    uint32_t now = millis();
+    uint16_t val;
+    if (now > (_lastButtonRead + 50)){
+        val = analogRead(ROTARY_ENCODER_BUTTON_PIN);
+        _lastButtonRead = now;
+        if (val < 4000) {  // any button was pressed
+            for (int i= 0; i <= 8; i++) {
+                if ((btnValues[i][0] <= val) && (val <= btnValues[i][1])) {
+                    log_i("Catched BTN# %d. Val: %d", btnValues[i][2], val);
+                    i = 8;
+                }
+            }
+        }
+    }
+
 }

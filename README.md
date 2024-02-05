@@ -1,10 +1,12 @@
-# ESP32-MiniWebRadio V2 with Rotary Encoder support
+# ESP32-MiniWebRadio V2 with Rotary Encoder support including adaption for controls of Majority Peterhouse Graduate Internetradio case
+
 based on <a href="https://github.com/schreibfaul1/ESP32-MiniWebRadio">ESP32-MiniWebRadio V2</a> by @[schreibfaul1](https://github.com/schreibfaul1)
 
 
 **Additional feature description**
 
 A rotary encoder is used for setting volume and choosing stations. In this use case, only Internet Radio mode is used. The reason for a rotary encoder (or physical UI elements in general) is better system response and usability in my opinion. The goal was to add the rotary encoder to the (great working) existing system while current user input via touchscreen is still possible.
+Additionally, the 8 buttons on the front should be used
 
 **Used hardware in this case**
 <ul>

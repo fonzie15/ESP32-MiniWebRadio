@@ -250,6 +250,7 @@ void           showDlnaItemsList(uint8_t level, uint16_t itemNr);
 void           rotary_onButtonClick();
 void           setRotaryMode(uint8_t mode);
 void           highlightCurrentStationInList();
+void           physicalButtonHandler();
 
 //prototypes (audiotask.cpp)
 void audioInit();
